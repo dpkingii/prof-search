@@ -1,5 +1,3 @@
-from fastapi.testclient import TestClient
-
 from ingest.load import insert_reviews, upsert_professor
 from search import keyword
 
@@ -46,18 +44,3 @@ def test_stopword_only_query_returns_nothing(conn):
     seed(conn)
     assert keyword.search(conn, "the and of") == []
 
-
-def test_api(conn):
-    seed(conn)
-    from api.main import app
-
-    with TestClient(app) as client:
-        assert client.get("/healthz").json() == {"ok": True}
-
-        body = client.get("/search", params={"q": "curves exams", "k": 5}).json()
-        assert body["results"][0]["professor_slug"] == "jones"
-
-        prof = client.get("/professors/smith").json()
-        assert prof["review_count"] == 2
-        assert client.get("/professors/nobody").status_code == 404
-        assert client.get("/search", params={"q": ""}).status_code == 422

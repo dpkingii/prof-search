@@ -8,6 +8,7 @@ os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 
 import psycopg
 import pytest
+from pgvector.psycopg import register_vector
 
 import db
 from migrate import migrate
@@ -20,7 +21,8 @@ def conn():
     except psycopg.OperationalError as e:
         pytest.skip(f"test database unavailable: {e}")
     migrate(c)
-    c.execute("TRUNCATE reviews, professors RESTART IDENTITY")
+    register_vector(c)
+    c.execute("TRUNCATE chunks, reviews, professors RESTART IDENTITY")
     c.commit()
     yield c
     c.close()

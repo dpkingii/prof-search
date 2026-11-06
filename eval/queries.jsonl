@@ -1,0 +1,10 @@
+{"id": "q001", "query": "explains concepts clearly and is helpful in office hours", "type": "teaching", "judgments": {}}
+{"id": "q002", "query": "boring lectures, just reads off the slides", "type": "teaching", "judgments": {}}
+{"id": "q003", "query": "lenient grader who curves exams", "type": "grading", "judgments": {}}
+{"id": "q004", "query": "harsh grading with no partial credit", "type": "grading", "judgments": {}}
+{"id": "q005", "query": "light workload, barely any homework", "type": "workload", "judgments": {}}
+{"id": "q006", "query": "projects take forever every week", "type": "workload", "judgments": {}}
+{"id": "q007", "query": "easy professor for CMSC216", "type": "course", "judgments": {}}
+{"id": "q008", "query": "best professor for MATH140", "type": "course", "judgments": {}}
+{"id": "q009", "query": "hard exams but fair", "type": "contrast", "judgments": {}}
+{"id": "q010", "query": "nice person but a bad teacher", "type": "contrast", "judgments": {}}
