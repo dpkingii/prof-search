@@ -51,11 +51,11 @@ Rerank wins every query type except course queries, where vector alone does best
 
 **Load.** With k6 at 10 concurrent users on one process, vector serves 282 req/s, hybrid 62 and rerank 12. Reranking is CPU bound.
 
-## Next steps
+## Known limitations
 
-- Treat course codes as exact filters instead of free text.
-- Cap how much very short reviews can score in keyword search.
-- Re-grade a sample with snippets from later in each review to measure the truncation bias.
+- Course codes are matched as free text, not as exact filters, so course queries are the one type rerank doesn't win.
+- Keyword search lets very short reviews outrank detailed ones, which crowds out better candidates for hybrid and rerank.
+- Graders saw the start of each review, the same text the truncated reranker reads, so the truncation gain hasn't been checked against later parts of reviews.
 
 ## Development
 
