@@ -13,16 +13,17 @@ from eval import metrics
 from eval.label import load
 from index.embed import Embedder
 from search import pipeline
+from search.rerank import Reranker
 
 
-def evaluate(conn, embedder, queries: list[dict], modes, k: int) -> dict[str, dict]:
+def evaluate(conn, embedder, reranker, queries: list[dict], modes, k: int) -> dict[str, dict]:
     report = {}
     for mode in modes:
-        pipeline.search(conn, embedder, "warm up", mode, k)
+        pipeline.search(conn, embedder, "warm up", mode, k, reranker)
         rows = []
         for q in queries:
             start = time.perf_counter()
-            ranked = [p["slug"] for p in pipeline.search(conn, embedder, q["query"], mode, k)]
+            ranked = [p["slug"] for p in pipeline.search(conn, embedder, q["query"], mode, k, reranker)]
             ms = (time.perf_counter() - start) * 1000
             j = q["judgments"]
             rows.append({
@@ -84,7 +85,7 @@ def main() -> None:
 
     with db.connect() as conn:
         register_vector(conn)
-        table = render(evaluate(conn, Embedder(), queries, args.modes, args.k), args.k, len(queries))
+        table = render(evaluate(conn, Embedder(), Reranker(), queries, args.modes, args.k), args.k, len(queries))
     print(table)
     if args.out:
         args.out.write_text(table + "\n")

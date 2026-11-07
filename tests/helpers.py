@@ -37,3 +37,16 @@ class FakeEmbedder:
         if not v.any():
             v[0] = 1
         return v / np.linalg.norm(v)
+
+
+class FakeReranker:
+    """Scores by words shared with the query, minus a penalty for negations the query lacks."""
+
+    def scores(self, query: str, texts: list[str]) -> list[float]:
+        q = set(re.findall(r"[a-z]+", query.lower()))
+        out = []
+        for t in texts:
+            words = re.findall(r"[a-z]+", t.lower())
+            negated = ({"not", "no", "never"} & set(words)) - q
+            out.append(len(q & set(words)) - (5.0 if negated else 0.0))
+        return out

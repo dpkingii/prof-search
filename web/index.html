@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Review Search</title>
+<style>
+  :root {
+    --bg: #fafaf9; --surface: #ffffff; --text: #1c1917; --muted: #78716c;
+    --border: #e7e5e4; --accent: #b91c1c; --accent-soft: #fee2e2; --mark: #fef08a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1917; --surface: #292524; --text: #f5f5f4; --muted: #a8a29e;
+      --border: #44403c; --accent: #f87171; --accent-soft: #450a0a; --mark: #713f12;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 48px 16px 64px; }
+  h1 { font-size: 28px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  form { display: flex; gap: 8px; }
+  input[type=search] {
+    flex: 1; min-width: 0; padding: 12px 14px; font: inherit; color: var(--text);
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  }
+  input[type=search]:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  button {
+    padding: 12px 18px; font: inherit; font-weight: 600; color: #fff;
+    background: var(--accent); border: 0; border-radius: 10px; cursor: pointer;
+  }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin: 14px 0 8px; }
+  .modes { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .modes label { padding: 6px 12px; font-size: 14px; cursor: pointer; color: var(--muted); }
+  .modes input { display: none; }
+  .modes input:checked + span { color: var(--text); font-weight: 600; }
+  .modes label:has(input:checked) { background: var(--accent-soft); }
+  .examples { display: flex; flex-wrap: wrap; gap: 6px; }
+  .examples button {
+    padding: 4px 10px; font-size: 13px; font-weight: 400; color: var(--muted);
+    background: transparent; border: 1px solid var(--border); border-radius: 999px;
+  }
+  .status { color: var(--muted); font-size: 14px; min-height: 21px; margin: 16px 0 8px; }
+  ol { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+  li { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+  .head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .name { font-weight: 650; font-size: 17px; color: var(--text); text-decoration: none; }
+  .name:hover { text-decoration: underline; }
+  .rating { color: var(--muted); font-size: 14px; white-space: nowrap; }
+  blockquote {
+    margin: 10px 0 0; padding-left: 12px; border-left: 3px solid var(--border);
+    color: var(--text); font-size: 15px; overflow-wrap: anywhere;
+  }
+  mark { background: var(--mark); color: inherit; border-radius: 2px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Review Search</h1>
+  <p class="sub">Find UMD professors by what students actually say about them.</p>
+
+  <form id="form">
+    <input id="q" type="search" placeholder="lenient grader who posts slides" autofocus aria-label="Search reviews">
+    <button>Search</button>
+  </form>
+
+  <div class="controls">
+    <div class="modes" role="radiogroup" aria-label="Search mode">
+      <label><input type="radio" name="mode" value="rerank" checked><span>Rerank</span></label>
+      <label><input type="radio" name="mode" value="hybrid"><span>Hybrid</span></label>
+      <label><input type="radio" name="mode" value="vector"><span>Vector</span></label>
+      <label><input type="radio" name="mode" value="keyword"><span>Keyword</span></label>
+    </div>
+    <div class="examples">
+      <button type="button">not much homework</button>
+      <button type="button">hard exams but fair</button>
+      <button type="button">records lectures</button>
+    </div>
+  </div>
+
+  <div class="status" id="status" aria-live="polite"></div>
+  <ol id="results"></ol>
+</main>
+<script>
+  const form = document.getElementById("form");
+  const input = document.getElementById("q");
+  const status = document.getElementById("status");
+  const list = document.getElementById("results");
+
+  const escape = (s) => s.replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  })[c]);
+
+  const STOP = new Set(["and", "but", "the", "for", "who", "was", "are", "you", "with", "that", "this"]);
+
+  function highlight(text, query) {
+    const words = (query.toLowerCase().match(/[a-z0-9]{3,}/g) || []).filter((w) => !STOP.has(w));
+    let html = escape(text);
+    for (const w of new Set(words)) {
+      html = html.replace(new RegExp(`\\b(${w}(?:s|es|ed|ing)?)\\b`, "gi"), "<mark>$1</mark>");
+    }
+    return html;
+  }
+
+  function render(results, query) {
+    list.innerHTML = results.map((p) => `
+      <li>
+        <div class="head">
+          <a class="name" href="https://planetterp.com/professor/${encodeURIComponent(p.slug)}"
+             target="_blank" rel="noopener">${escape(p.name)}</a>
+          <span class="rating">${p.average_rating == null ? "no rating" : `★ ${p.average_rating.toFixed(2)}`}</span>
+        </div>
+        ${p.snippets.map((s) => `<blockquote>${highlight(s.length > 320 ? s.slice(0, 320) + "…" : s, query)}</blockquote>`).join("")}
+      </li>`).join("");
+  }
+
+  async function search() {
+    const q = input.value.trim();
+    if (!q) return;
+    const mode = document.querySelector("input[name=mode]:checked").value;
+    history.replaceState(null, "", `?${new URLSearchParams({ q, mode })}`);
+    status.textContent = "Searching…";
+    const start = performance.now();
+    try {
+      const res = await fetch(`/search?${new URLSearchParams({ q, mode, k: 10 })}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const body = await res.json();
+      const ms = Math.round(performance.now() - start);
+      status.textContent = body.results.length
+        ? `${body.results.length} professors · ${mode} · ${ms} ms`
+        : "No matches.";
+      render(body.results, q);
+    } catch (err) {
+      status.textContent = `Search failed: ${err.message}`;
+      list.innerHTML = "";
+    }
+  }
+
+  form.addEventListener("submit", (e) => { e.preventDefault(); search(); });
+  document.querySelectorAll("input[name=mode]").forEach((r) => r.addEventListener("change", search));
+  document.querySelectorAll(".examples button").forEach((b) =>
+    b.addEventListener("click", () => { input.value = b.textContent; search(); }));
+
+  const params = new URLSearchParams(location.search);
+  if (params.get("q")) {
+    input.value = params.get("q");
+    const r = document.querySelector(`input[name=mode][value="${params.get("mode")}"]`);
+    if (r) r.checked = true;
+    search();
+  }
+</script>
+</body>
+</html>

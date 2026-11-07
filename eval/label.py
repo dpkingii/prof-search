@@ -14,6 +14,7 @@ from pgvector.psycopg import register_vector
 import db
 from index.embed import Embedder
 from search import pipeline
+from search.rerank import Reranker
 
 QUERIES = Path(__file__).parent / "queries.jsonl"
 
@@ -26,10 +27,10 @@ def save(queries: list[dict], path: Path = QUERIES) -> None:
     path.write_text("".join(json.dumps(q, ensure_ascii=False) + "\n" for q in queries))
 
 
-def pool_candidates(conn, embedder, query: str, depth: int) -> dict[str, dict]:
+def pool_candidates(conn, embedder, reranker, query: str, depth: int) -> dict[str, dict]:
     pooled: dict[str, dict] = {}
     for mode in pipeline.MODES:
-        for prof in pipeline.search(conn, embedder, query, mode, depth):
+        for prof in pipeline.search(conn, embedder, query, mode, depth, reranker):
             pooled.setdefault(prof["slug"], prof)
     return pooled
 
@@ -49,13 +50,14 @@ def main() -> None:
 
     queries = load()
     embedder = Embedder()
+    reranker = Reranker()
     with db.connect() as conn:
         register_vector(conn)
         for q in queries:
             if args.only and q["id"] != args.only:
                 continue
             judgments = q.setdefault("judgments", {})
-            todo = [p for s, p in pool_candidates(conn, embedder, q["query"], args.depth).items()
+            todo = [p for s, p in pool_candidates(conn, embedder, reranker, q["query"], args.depth).items()
                     if s not in judgments]
             for i, prof in enumerate(todo, 1):
                 print(f"\n[{q['id']}] {q['query']}  ({i}/{len(todo)})")

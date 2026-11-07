@@ -1,4 +1,4 @@
-.PHONY: venv db migrate ingest api test lint embed label eval
+.PHONY: venv db migrate ingest api test lint embed label eval loadtest
 
 venv:
 	python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
@@ -29,3 +29,6 @@ label:
 
 eval:
 	.venv/bin/python -m eval.run_eval --out eval/results.md
+
+loadtest:
+	k6 run -e MODE=$(or $(MODE),rerank) -e VUS=$(or $(VUS),10) load/search.js
