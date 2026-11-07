@@ -2,7 +2,11 @@
 
 Search 46k+ UMD professor reviews from [PlanetTerp](https://planetterp.com) by meaning, not just keywords.
 
-Status: week 3. Keyword (Postgres full-text), vector (bge-small + pgvector HNSW), hybrid (reciprocal rank fusion), and cross-encoder reranked search, evaluated on 60 graded queries and load tested with k6.
+Four retrieval modes over the same data, keyword (Postgres full-text), vector (bge-small + pgvector HNSW), hybrid (reciprocal rank fusion), and a cross-encoder reranker, compared on 60 graded queries. Reranking raises nDCG@10 from 0.509 (keyword) and 0.636 (hybrid) to 0.735, at 155 ms p50. Full numbers are in [Results](#results).
+
+![The query "not much homework" in hybrid and rerank modes side by side](docs/hybrid-vs-rerank.png)
+
+Same query, two modes. Hybrid returns reviews that contain "not", "much" and "homework" but complain about the homework. Rerank returns reviews that say there isn't much of it.
 
 ## Run locally
 
