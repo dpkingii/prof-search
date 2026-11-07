@@ -51,7 +51,7 @@ Rerank wins every query type except course queries, where vector alone does best
 
 **Load.** With k6 at 10 concurrent users on one process, vector serves 282 req/s, hybrid 62 and rerank 12. Reranking is CPU bound.
 
-## Known limitations
+## Limitations
 
 - Course codes are matched as free text, not as exact filters, so course queries are the one type rerank doesn't win.
 - Keyword search lets very short reviews outrank detailed ones, which crowds out better candidates for hybrid and rerank.
