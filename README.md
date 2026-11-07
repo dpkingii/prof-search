@@ -1,4 +1,4 @@
-# review-search
+# prof-search
 
 Search 46k+ UMD professor reviews from [PlanetTerp](https://planetterp.com) by meaning, not just keywords.
 

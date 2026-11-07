@@ -25,7 +25,7 @@ async def lifespan(app: FastAPI):
         yield
 
 
-app = FastAPI(title="review-search", lifespan=lifespan)
+app = FastAPI(title="prof-search", lifespan=lifespan)
 
 
 def get_conn(request: Request):
