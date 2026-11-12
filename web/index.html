@@ -181,8 +181,11 @@
 
   form.addEventListener("submit", (e) => { e.preventDefault(); search(); });
   document.querySelectorAll("input[name=mode]").forEach((r) => r.addEventListener("change", search));
+  // Each view starts on the mode that scored best for it in the evals (see README).
+  const DEFAULT_MODE = { professors: "rerank", "gen-eds": "hybrid" };
   document.querySelectorAll("input[name=view]").forEach((r) => r.addEventListener("change", () => {
     genEd.hidden = r.value !== "gen-eds";
+    document.querySelector(`input[name=mode][value=${DEFAULT_MODE[r.value]}]`).checked = true;
     search();
   }));
   genEd.addEventListener("change", search);
