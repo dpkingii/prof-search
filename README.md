@@ -45,7 +45,7 @@ On 20 gen-ed queries (410 judgments, same pooling and 0/1/2 scale as above), hyb
 | hybrid | 0.566 | 0.975 | 0.670 | 44.6 |
 | rerank | 0.548 | 0.850 | 0.646 | 155.8 |
 
-Negation is the likely cause. For "easy A, not much work" in natural sciences, rerank puts ASTR340 first on "This is not an easy class". These judgments were made by Claude reading the same snippets, not by hand like the professor set, so treat them as a rougher check. Per-type numbers are in [eval/gen_ed_results.md](eval/gen_ed_results.md).
+Negation is the likely cause. For "easy A, not much work" in natural sciences, rerank puts ASTR340 first on "This is not an easy class". These judgments were LLM-graded from the same snippets, not graded by hand like the professor set, so treat them as a rougher check. Per-type numbers are in [eval/gen_ed_results.md](eval/gen_ed_results.md).
 
 ## Results
 
