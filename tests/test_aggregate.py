@@ -1,4 +1,6 @@
-from search.aggregate import professors
+import pytest
+
+from search.aggregate import courses, professors
 from tests.helpers import needs_impl
 
 
@@ -54,3 +56,27 @@ def test_prefers_matched_chunk_over_full_body():
 @needs_impl
 def test_empty():
     assert professors([]) == []
+
+
+def course_hit(id, course, score, body):
+    return {**hit(id, "smith", score, body), "course": course}
+
+
+COURSE_HITS = [
+    course_hit(1, None, 0.95, "no course"),
+    course_hit(2, "ENGL101", 0.9, "engl one"),
+    course_hit(3, "HIST200", 0.8, "hist one"),
+    course_hit(4, "ENGL101", 0.7, "engl two"),
+]
+
+
+def test_courses_groups_by_course_and_drops_hits_without_one():
+    result = courses(COURSE_HITS)
+    assert [c["course_id"] for c in result] == ["ENGL101", "HIST200"]
+    assert result[0]["score"] == pytest.approx(0.9 + 0.7 / 2)
+    assert result[0]["snippets"] == ["engl one", "engl two"]
+
+
+def test_courses_limit_and_empty():
+    assert len(courses(COURSE_HITS, limit=1)) == 1
+    assert courses([]) == []

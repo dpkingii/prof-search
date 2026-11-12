@@ -44,3 +44,10 @@ def test_stopword_only_query_returns_nothing(conn):
     seed(conn)
     assert keyword.search(conn, "the and of") == []
 
+
+def test_course_filter(conn):
+    seed(conn)
+    results = keyword.search(conn, "lenient grader brutal exams", courses=["MATH140"])
+    assert [r["course"] for r in results] == ["MATH140"]
+    assert keyword.search(conn, "lenient grader brutal exams", courses=[]) == []
+

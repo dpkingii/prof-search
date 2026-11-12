@@ -22,7 +22,7 @@ def conn():
         pytest.skip(f"test database unavailable: {e}")
     migrate(c)
     register_vector(c)
-    c.execute("TRUNCATE chunks, reviews, professors RESTART IDENTITY")
+    c.execute("TRUNCATE chunks, reviews, professors, gen_ed_courses RESTART IDENTITY")
     c.commit()
     yield c
     c.close()

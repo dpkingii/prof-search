@@ -35,3 +35,30 @@ def professors(hits: list[dict], limit: int = 10, snippets: int = 3) -> list[dic
         results.append(group)
     results.sort(key=lambda g: (-g["score"], g["slug"]))
     return results[:limit]
+
+
+def courses(hits: list[dict], limit: int = 10, snippets: int = 3) -> list[dict]:
+    """Collapse review-level hits into a ranked list of courses, scored like professors.
+
+    hits are as for professors, plus course. Hits without a course are dropped.
+
+    Returns at most `limit` dicts, best first:
+        {"course_id", "score", "snippets": [str, ...]}
+
+    Contract: tests/test_aggregate.py
+    """
+    groups: dict[str, list[dict]] = {}
+    for hit in hits:
+        if hit.get("course"):
+            groups.setdefault(hit["course"], []).append(hit)
+
+    results = []
+    for course_id, group in groups.items():
+        ranked = sorted(group, key=lambda h: -h["score"])
+        results.append({
+            "course_id": course_id,
+            "score": sum(h["score"] / i for i, h in enumerate(ranked[:TOP_N], 1)),
+            "snippets": [h.get("chunk") or h["body"] for h in ranked[:snippets]],
+        })
+    results.sort(key=lambda c: (-c["score"], c["course_id"]))
+    return results[:limit]

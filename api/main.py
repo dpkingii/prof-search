@@ -12,6 +12,7 @@ from psycopg_pool import ConnectionPool
 
 import db
 from index.embed import Embedder
+from ingest.umdio import GenEd
 from search import pipeline
 from search.rerank import Reranker
 
@@ -62,6 +63,20 @@ def search(
     mode: pipeline.Mode = "rerank",
 ):
     return {"query": q, "mode": mode, "results": pipeline.search(conn, embedder, q, mode, k, reranker)}
+
+
+@app.get("/gen-eds")
+def gen_eds(
+    conn: Conn,
+    embedder: Annotated[Embedder, Depends(get_embedder)],
+    reranker: Annotated[Reranker, Depends(get_reranker)],
+    q: str = Query(min_length=1, max_length=200),
+    k: int = Query(10, ge=1, le=50),
+    mode: pipeline.Mode = "rerank",
+    gen_ed: GenEd | None = None,
+):
+    results = pipeline.search_gen_eds(conn, embedder, q, mode, k, reranker, gen_ed)
+    return {"query": q, "mode": mode, "gen_ed": gen_ed, "results": results}
 
 
 @app.get("/professors/{slug}")
