@@ -10,20 +10,31 @@ from pgvector.psycopg import register_vector
 
 import db
 from eval import metrics
-from eval.label import load
+from eval.label import GEN_ED_QUERIES, QUERIES, load
 from index.embed import Embedder
 from search import pipeline
 from search.rerank import Reranker
 
 
-def evaluate(conn, embedder, reranker, queries: list[dict], modes, k: int) -> dict[str, dict]:
+def rank_professors(conn, embedder, reranker, q: dict, mode, k: int) -> list[str]:
+    return [p["slug"] for p in pipeline.search(conn, embedder, q["query"], mode, k, reranker)]
+
+
+def rank_gen_eds(conn, embedder, reranker, q: dict, mode, k: int) -> list[str]:
+    results = pipeline.search_gen_eds(conn, embedder, q["query"], mode, k, reranker, q.get("gen_ed"))
+    return [c["course_id"] for c in results]
+
+
+def evaluate(
+    conn, embedder, reranker, queries: list[dict], modes, k: int, rank=rank_professors
+) -> dict[str, dict]:
     report = {}
     for mode in modes:
         pipeline.search(conn, embedder, "warm up", mode, k, reranker)
         rows = []
         for q in queries:
             start = time.perf_counter()
-            ranked = [p["slug"] for p in pipeline.search(conn, embedder, q["query"], mode, k, reranker)]
+            ranked = rank(conn, embedder, reranker, q, mode, k)
             ms = (time.perf_counter() - start) * 1000
             j = q["judgments"]
             rows.append({
@@ -77,15 +88,19 @@ def main() -> None:
     parser.add_argument("--k", type=int, default=10)
     parser.add_argument("--modes", nargs="+", default=list(pipeline.MODES), choices=pipeline.MODES)
     parser.add_argument("--out", type=Path, help="also write the tables to this file")
+    parser.add_argument("--gen-eds", action="store_true", help="evaluate gen-ed course ranking")
     args = parser.parse_args()
 
-    queries = [q for q in load() if any(g >= 1 for g in q.get("judgments", {}).values())]
+    path, rank = (GEN_ED_QUERIES, rank_gen_eds) if args.gen_eds else (QUERIES, rank_professors)
+    queries = [q for q in load(path) if any(g >= 1 for g in q.get("judgments", {}).values())]
     if not queries:
-        raise SystemExit("no labeled queries yet; run python -m eval.label first")
+        flag = " --gen-eds" if args.gen_eds else ""
+        raise SystemExit(f"no labeled queries yet; run python -m eval.label{flag} first")
 
     with db.connect() as conn:
         register_vector(conn)
-        table = render(evaluate(conn, Embedder(), Reranker(), queries, args.modes, args.k), args.k, len(queries))
+        report = evaluate(conn, Embedder(), Reranker(), queries, args.modes, args.k, rank)
+        table = render(report, args.k, len(queries))
     print(table)
     if args.out:
         args.out.write_text(table + "\n")

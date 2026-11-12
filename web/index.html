@@ -39,6 +39,10 @@
   .modes input { display: none; }
   .modes input:checked + span { color: var(--text); font-weight: 600; }
   .modes label:has(input:checked) { background: var(--accent-soft); }
+  select {
+    padding: 6px 10px; font: inherit; font-size: 14px; color: var(--text);
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  }
   .examples { display: flex; flex-wrap: wrap; gap: 6px; }
   .examples button {
     padding: 4px 10px; font-size: 13px; font-weight: 400; color: var(--muted);
@@ -69,6 +73,20 @@
   </form>
 
   <div class="controls">
+    <div class="modes" role="radiogroup" aria-label="Results">
+      <label><input type="radio" name="view" value="professors" checked><span>Professors</span></label>
+      <label><input type="radio" name="view" value="gen-eds"><span>Gen-eds</span></label>
+    </div>
+    <select id="gen-ed" aria-label="Gen-ed category" hidden>
+      <option value="">Any gen-ed</option>
+      <option>FSAW</option><option>FSAR</option><option>FSMA</option><option>FSOC</option>
+      <option>FSPW</option><option>DSHS</option><option>DSHU</option><option>DSNS</option>
+      <option>DSNL</option><option>DSSP</option><option>SCIS</option><option>DVCC</option>
+      <option>DVUP</option>
+    </select>
+  </div>
+
+  <div class="controls">
     <div class="modes" role="radiogroup" aria-label="Search mode">
       <label><input type="radio" name="mode" value="rerank" checked><span>Rerank</span></label>
       <label><input type="radio" name="mode" value="hybrid"><span>Hybrid</span></label>
@@ -79,6 +97,7 @@
       <button type="button">not much homework</button>
       <button type="button">hard exams but fair</button>
       <button type="button">records lectures</button>
+      <button type="button">easy A, not much work</button>
     </div>
   </div>
 
@@ -90,6 +109,7 @@
   const input = document.getElementById("q");
   const status = document.getElementById("status");
   const list = document.getElementById("results");
+  const genEd = document.getElementById("gen-ed");
 
   const escape = (s) => s.replace(/[&<>"']/g, (c) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
@@ -106,6 +126,21 @@
     return html;
   }
 
+  const snippets = (r, query) => r.snippets.map((s) =>
+    `<blockquote>${highlight(s.length > 320 ? s.slice(0, 320) + "…" : s, query)}</blockquote>`).join("");
+
+  function renderCourses(results, query) {
+    list.innerHTML = results.map((c) => `
+      <li>
+        <div class="head">
+          <a class="name" href="https://planetterp.com/course/${encodeURIComponent(c.course_id)}"
+             target="_blank" rel="noopener">${escape(c.course_id)} ${escape(c.name)}</a>
+          <span class="rating">${c.gen_eds.map(escape).join(" · ")}</span>
+        </div>
+        ${snippets(c, query)}
+      </li>`).join("");
+  }
+
   function render(results, query) {
     list.innerHTML = results.map((p) => `
       <li>
@@ -114,7 +149,7 @@
              target="_blank" rel="noopener">${escape(p.name)}</a>
           <span class="rating">${p.average_rating == null ? "no rating" : `★ ${p.average_rating.toFixed(2)}`}</span>
         </div>
-        ${p.snippets.map((s) => `<blockquote>${highlight(s.length > 320 ? s.slice(0, 320) + "…" : s, query)}</blockquote>`).join("")}
+        ${snippets(p, query)}
       </li>`).join("");
   }
 
@@ -122,18 +157,22 @@
     const q = input.value.trim();
     if (!q) return;
     const mode = document.querySelector("input[name=mode]:checked").value;
-    history.replaceState(null, "", `?${new URLSearchParams({ q, mode })}`);
+    const view = document.querySelector("input[name=view]:checked").value;
+    const courses = view === "gen-eds";
+    const api = { q, mode };
+    if (courses && genEd.value) api.gen_ed = genEd.value;
+    history.replaceState(null, "", `?${new URLSearchParams(courses ? { ...api, view } : api)}`);
     status.textContent = "Searching…";
     const start = performance.now();
     try {
-      const res = await fetch(`/search?${new URLSearchParams({ q, mode, k: 10 })}`);
+      const res = await fetch(`/${courses ? "gen-eds" : "search"}?${new URLSearchParams({ ...api, k: 10 })}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const body = await res.json();
       const ms = Math.round(performance.now() - start);
       status.textContent = body.results.length
-        ? `${body.results.length} professors · ${mode} · ${ms} ms`
+        ? `${body.results.length} ${courses ? "courses" : "professors"} · ${mode} · ${ms} ms`
         : "No matches.";
-      render(body.results, q);
+      (courses ? renderCourses : render)(body.results, q);
     } catch (err) {
       status.textContent = `Search failed: ${err.message}`;
       list.innerHTML = "";
@@ -142,6 +181,14 @@
 
   form.addEventListener("submit", (e) => { e.preventDefault(); search(); });
   document.querySelectorAll("input[name=mode]").forEach((r) => r.addEventListener("change", search));
+  // Each view starts on the mode that scored best for it in the evals (see README).
+  const DEFAULT_MODE = { professors: "rerank", "gen-eds": "hybrid" };
+  document.querySelectorAll("input[name=view]").forEach((r) => r.addEventListener("change", () => {
+    genEd.hidden = r.value !== "gen-eds";
+    document.querySelector(`input[name=mode][value=${DEFAULT_MODE[r.value]}]`).checked = true;
+    search();
+  }));
+  genEd.addEventListener("change", search);
   document.querySelectorAll(".examples button").forEach((b) =>
     b.addEventListener("click", () => { input.value = b.textContent; search(); }));
 
@@ -150,6 +197,11 @@
     input.value = params.get("q");
     const r = document.querySelector(`input[name=mode][value="${params.get("mode")}"]`);
     if (r) r.checked = true;
+    if (params.get("view") === "gen-eds") {
+      document.querySelector("input[name=view][value=gen-eds]").checked = true;
+      genEd.hidden = false;
+      genEd.value = params.get("gen_ed") || "";
+    }
     search();
   }
 </script>

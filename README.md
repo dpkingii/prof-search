@@ -16,6 +16,7 @@ Requires Docker and Python 3.12+.
 make venv db migrate
 make ingest    # ~145 API requests (~6 min first run), cached under .cache/
 make embed     # chunk + embed reviews (~22 min on CPU)
+make gen-eds   # gen-ed codes for ~940 courses from umd.io (~4 min)
 make api       # search page at http://localhost:8000, API docs at /docs
 ```
 
@@ -26,6 +27,23 @@ make api       # search page at http://localhost:8000, API docs at /docs
 3. **Hybrid:** the two lists are merged with reciprocal rank fusion.
 4. **Rerank:** a MiniLM cross-encoder reads the query next to each of the top 50 fused reviews and rescores them.
 5. Reviews are collapsed into professors, scored by the rank-discounted sum of their best three reviews.
+
+## Gen-ed courses
+
+`GET /gen-eds?q=easy A, not much work&gen_ed=DSHU` ranks gen-ed courses instead of professors. The gen-ed codes come from [umd.io](https://umd.io) for the last fall and spring terms. The same four modes run, restricted to reviews of gen-ed courses (optionally one category), and the hits are grouped by course with the same best-three score. Filtered vector search uses pgvector's iterative index scan, so the filter doesn't leave the HNSW scan short of results.
+
+Gen-ed courses account for 17.8k of the 46.9k reviews. "Easy" comes only from what reviews say. Grade data isn't used yet.
+
+On 20 gen-ed queries (410 judgments, same pooling and 0/1/2 scale as above), hybrid ranks best and rerank falls behind it, so `/gen-eds` defaults to hybrid:
+
+| Method | Recall@10 | MRR | nDCG@10 | p50 ms |
+|---|---|---|---|---|
+| keyword | 0.474 | 0.950 | 0.567 | 16.0 |
+| vector | 0.557 | 0.925 | 0.628 | 31.8 |
+| hybrid | 0.566 | 0.975 | 0.670 | 44.6 |
+| rerank | 0.548 | 0.850 | 0.646 | 155.8 |
+
+Negation is the likely cause. For "easy A, not much work" in natural sciences, rerank puts ASTR340 first on "This is not an easy class". These judgments were made by Claude reading the same snippets, not by hand like the professor set, so treat them as a rougher check. Per-type numbers are in [eval/gen_ed_results.md](eval/gen_ed_results.md).
 
 ## Results
 
@@ -64,5 +82,6 @@ make test      # integration tests against the review_test database
 make lint
 make label     # grade unjudged results in eval/queries.jsonl
 make eval      # metrics per mode -> eval/results.md
+make label-gen-eds && make eval-gen-eds   # same for gen-ed courses -> eval/gen_ed_results.md
 make loadtest  # k6, override with MODE=hybrid VUS=10
 ```

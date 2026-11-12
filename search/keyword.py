@@ -20,11 +20,17 @@ SELECT
 FROM reviews r
 JOIN professors p ON p.slug = r.professor_slug
 CROSS JOIN q
-WHERE r.tsv @@ q.query
+WHERE r.tsv @@ q.query {course_filter}
 ORDER BY score DESC, r.id
 LIMIT %(k)s
 """
 
+COURSE_FILTER = "AND r.course = ANY(%(courses)s)"
 
-def search(conn: psycopg.Connection, query: str, k: int = 10) -> list[dict]:
-    return conn.execute(SEARCH_SQL, {"q": query, "k": k}).fetchall()
+
+def search(
+    conn: psycopg.Connection, query: str, k: int = 10, courses: list[str] | None = None
+) -> list[dict]:
+    """courses, when given, restricts results to reviews of those courses."""
+    sql = SEARCH_SQL.format(course_filter="" if courses is None else COURSE_FILTER)
+    return conn.execute(sql, {"q": query, "k": k, "courses": courses}).fetchall()

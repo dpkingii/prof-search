@@ -43,3 +43,10 @@ def test_one_hit_per_review_with_best_chunk(conn):
     ids = [r["id"] for r in results]
     assert len(ids) == len(set(ids)) == 3
     assert "slides" in results[0]["chunk"]
+
+
+def test_course_filter(conn):
+    seed(conn)
+    index_reviews(conn, embedder, chunker=whole_review)
+    results = vector.search(conn, embedder.query("lecture slides"), k=10, courses=["MATH140"])
+    assert [r["course"] for r in results] == ["MATH140"]

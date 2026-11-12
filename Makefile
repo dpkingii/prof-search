@@ -1,4 +1,4 @@
-.PHONY: venv db migrate ingest api test lint embed label eval loadtest
+.PHONY: venv db migrate ingest gen-eds api test lint embed label eval label-gen-eds eval-gen-eds loadtest
 
 venv:
 	python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
@@ -11,6 +11,9 @@ migrate:
 
 ingest:
 	.venv/bin/python -m ingest.load
+
+gen-eds:
+	.venv/bin/python -m ingest.umdio
 
 api:
 	.venv/bin/uvicorn api.main:app --reload
@@ -29,6 +32,12 @@ label:
 
 eval:
 	.venv/bin/python -m eval.run_eval --out eval/results.md
+
+label-gen-eds:
+	.venv/bin/python -m eval.label --gen-eds
+
+eval-gen-eds:
+	.venv/bin/python -m eval.run_eval --gen-eds --out eval/gen_ed_results.md
 
 loadtest:
 	k6 run -e MODE=$(or $(MODE),rerank) -e VUS=$(or $(VUS),10) load/search.js
