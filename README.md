@@ -4,6 +4,8 @@ Search 46k+ UMD professor reviews from [PlanetTerp](https://planetterp.com) by m
 
 Four retrieval modes over the same data, keyword (Postgres full-text), vector (bge-small + pgvector HNSW), hybrid (reciprocal rank fusion), and a cross-encoder reranker, compared on 60 graded queries. Reranking raises nDCG@10 from 0.509 (keyword) and 0.636 (hybrid) to 0.735, at 155 ms p50.
 
+It can also rank gen-ed courses by their reviews, filtered by category. See [Gen-ed courses](#gen-ed-courses).
+
 <img src="docs/hybrid-vs-rerank.png" width="720" alt="The query &quot;not much homework&quot; in hybrid and rerank modes side by side">
 
 Hybrid returns reviews that contain "not", "much" and "homework" but complain about the homework. Rerank returns reviews that say there isn't much of it.
