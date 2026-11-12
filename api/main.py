@@ -72,7 +72,7 @@ def gen_eds(
     reranker: Annotated[Reranker, Depends(get_reranker)],
     q: str = Query(min_length=1, max_length=200),
     k: int = Query(10, ge=1, le=50),
-    mode: pipeline.Mode = "rerank",
+    mode: pipeline.Mode = "hybrid",  # best on the gen-ed eval, see README
     gen_ed: GenEd | None = None,
 ):
     results = pipeline.search_gen_eds(conn, embedder, q, mode, k, reranker, gen_ed)

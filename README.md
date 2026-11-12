@@ -34,7 +34,7 @@ make api       # search page at http://localhost:8000, API docs at /docs
 
 Gen-ed courses account for 17.8k of the 46.9k reviews. "Easy" comes only from what reviews say. Grade data isn't used yet.
 
-On 20 gen-ed queries (410 judgments, same pooling and 0/1/2 scale as above), hybrid ranks best and rerank falls behind it:
+On 20 gen-ed queries (410 judgments, same pooling and 0/1/2 scale as above), hybrid ranks best and rerank falls behind it, so `/gen-eds` defaults to hybrid:
 
 | Method | Recall@10 | MRR | nDCG@10 | p50 ms |
 |---|---|---|---|---|

@@ -50,7 +50,7 @@ def search_gen_eds(
     conn: psycopg.Connection,
     embedder,
     query: str,
-    mode: Mode = "rerank",
+    mode: Mode = "hybrid",
     k: int = 10,
     reranker=None,
     gen_ed: str | None = None,

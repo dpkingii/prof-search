@@ -67,5 +67,9 @@ def test_gen_eds_returns_only_gen_ed_courses(client, conn, mode):
     assert client.get("/gen-eds", params={**params, "gen_ed": "DSHU"}).json()["results"] == []
 
 
+def test_gen_eds_default_mode_is_hybrid(client):
+    assert client.get("/gen-eds", params={"q": "exams"}).json()["mode"] == "hybrid"
+
+
 def test_gen_eds_validation(client):
     assert client.get("/gen-eds", params={"q": "x", "gen_ed": "BOGUS"}).status_code == 422
